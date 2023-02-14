@@ -67,16 +67,24 @@ enum Expression {
 }
 
 impl Expression {
-    fn parse_block(iter: &mut Peekable<Rev<Iter<Token>>>, is_paren_block: bool) -> Self {
+    fn parse_block(
+        iter: &mut Peekable<Rev<Iter<Token>>>,
+        is_paren_block: bool,
+    ) -> Self {
         let mut expr: Option<Expression> = None; // self
         let mut operand: Option<Expression> = None;
 
+        let mut paren_close_matched = false; // used if is_paren_block is true
+
         while let Some(&token) = iter.peek() {
+            // ParenOpen is a special case
             if let Token::ParenOpen = token {
                     // consume the paren if it belongs to this block
                     if is_paren_block {
+                        paren_close_matched = true;
                         iter.next();
                     }
+
                     break;
             }
 
@@ -106,6 +114,10 @@ impl Expression {
             }
         }
 
+        if is_paren_block && !paren_close_matched {
+            panic!("Unmatched parenthesis!");
+        }
+
         if let Some(expr) = expr {
             expr
         } else {
@@ -114,7 +126,10 @@ impl Expression {
     }
 
     pub fn parse(tokens: &[Token]) -> Self {
-        Expression::parse_block(&mut tokens.iter().rev().peekable(), false)
+        Expression::parse_block(
+            &mut tokens.iter().rev().peekable(),
+            false
+        )
     }
 
     pub fn evaluate(&self) -> i32 {
