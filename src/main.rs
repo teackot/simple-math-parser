@@ -1,5 +1,12 @@
 use std::{iter::{Peekable, Rev}, slice::Iter};
 
+macro_rules! errexit {
+    ($reason:literal) => {
+        println!("Error: {}", $reason);
+        std::process::exit(-1);
+    };
+}
+
 // Operators
 #[derive(Clone, Copy, Debug)]
 enum Op {
@@ -51,7 +58,9 @@ fn tokenize(s: &str) -> Vec<Token> {
                 '/' => Token::Operator(Op::Div),
                 '(' => Token::ParenOpen,
                 ')' => Token::ParenClose,
-                _   => panic!("Unknown operator!")
+                _   => {
+                    errexit!("Unknown operator!");
+                }
             });
         }
 
@@ -93,7 +102,7 @@ impl Expression {
             match token {
                 Token::Constant(n) => {
                     operand = Some(Expression::Constant(
-                        (*n).try_into().expect("Out of bounds!")
+                        (*n).try_into().unwrap_or_else(|_| { errexit!("Out of bounds!"); })
                     ));
                 },
 
@@ -101,7 +110,7 @@ impl Expression {
                     expr = Some(Expression::Operator(
                         *op,
                         Box::new(Expression::parse_block(iter, false)),
-                        Box::new(operand.expect("Expected an operand!"))
+                        Box::new(operand.unwrap_or_else(|| { errexit!("Expected an operand!"); }))
                     ));
                     operand = None;
                 },
@@ -115,13 +124,13 @@ impl Expression {
         }
 
         if is_paren_block && !paren_close_matched {
-            panic!("Unmatched parenthesis!");
+            errexit!("Unmatched parenthesis!");
         }
 
         if let Some(expr) = expr {
             expr
         } else {
-            operand.expect("Expected an operand!")
+            operand.unwrap_or_else(|| { errexit!("Expected an operand!"); })
         }
     }
 
